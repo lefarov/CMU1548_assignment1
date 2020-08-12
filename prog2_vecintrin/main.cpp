@@ -183,6 +183,8 @@ void absVector(float* values, float* output, int N) {
 //  Note: Take a careful look at this loop indexing.  This example
 //  code is not guaranteed to work when (N % VECTOR_WIDTH) != 0.
 //  Why is that the case?
+//  -> line 190: maskAll always contains mask for the VECTOR_WIDTH values
+//  -> line 197: will always load VECTOR_WIDTH elements: might result in overflow
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
 
     // All ones
@@ -238,11 +240,65 @@ void clampedExpSerial(float* values, int* exponents, float* output, int N) {
 
 void clampedExpVector(float* values, int* exponents, float* output, int N) {
   // TODO: Implement your vectorized version of clampedExpSerial here
+  // Temp variables
+  __cmu418_vec_float x;
+  __cmu418_vec_int y;
+  __cmu418_vec_float result;
 
+  // Temp vectors
+  __cmu418_vec_float zero_float = _cmu418_vset_float(0.f);
+  __cmu418_vec_float one_float = _cmu418_vset_float(1.f);
+  __cmu418_vec_float threshold_float = _cmu418_vset_float(9.999999f);
+  __cmu418_vec_int zero_int = _cmu418_vset_int(0);
+  __cmu418_vec_int one_int = _cmu418_vset_int(1);
+
+  // Temp masks
+  __cmu418_mask maskAll;  // mask for values reading
+  __cmu418_mask maskEqualZero;
+  __cmu418_mask maskGraterZero;
+  __cmu418_mask maskGraterThanThreshold;
+  __cmu418_mask maskLessOrEqualThanThreshold;
+
+  
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
+    if (i + VECTOR_WIDTH > N) {
+      maskAll = _cmu418_init_ones((N-i) % VECTOR_WIDTH);
+    } else {
+      maskAll = _cmu418_init_ones(VECTOR_WIDTH);
+    }
+    maskEqualZero = _cmu418_init_ones(0);
+    maskGraterZero = _cmu418_init_ones(0);
+    maskGraterThanThreshold = _cmu418_init_ones(0);
 
+    // Load vector of values from contiguous memory addresses
+    _cmu418_vload_float(x, values+i, maskAll);
+    _cmu418_vload_int(y, exponents+i, maskAll);
+
+    // Handle zeros
+    // if (y == 0) {
+    _cmu418_veq_int(maskEqualZero, y, zero_int, maskAll);
+    _cmu418_vmove_float(result, one_float, maskEqualZero);
+    // } else {
+    // Handle non zero elements
+    _cmu418_vgt_int(maskGraterZero, y, zero_int, maskAll);
+    _cmu418_vmove_float(result, x, maskGraterZero);
+
+    // Update count mask
+    _cmu418_vsub_int(y, y, one_int, maskGraterZero);
+    _cmu418_vgt_int(maskGraterZero, y, zero_int, maskAll);
+    while (_cmu418_cntbits(maskGraterZero)) {  
+      _cmu418_vmult_float(result, result, x, maskGraterZero);
+      
+      // Update count mask
+      _cmu418_vsub_int(y, y, one_int, maskGraterZero);
+      _cmu418_vgt_int(maskGraterZero, y, zero_int, maskGraterZero);
+    }
+
+    // Clamp value
+    _cmu418_vgt_float(maskGraterThanThreshold, result, threshold_float, maskAll);
+    _cmu418_vmove_float(result, threshold_float, maskGraterThanThreshold);
+    _cmu418_vstore_float(output+i, result, maskAll);
   }
-
 }
 
 float arraySumSerial(float* values, int N) {
@@ -254,15 +310,37 @@ float arraySumSerial(float* values, int N) {
   return sum;
 }
 
+void printArray(float* values, int N) {
+  for (int i=0; i<N; i++) {
+    printf("%f ", values[i]);
+  }
+  printf("\n");
+}
+
 // Assume N is a power VECTOR_WIDTH == 0
 // Assume VECTOR_WIDTH is a power of 2
 float arraySumVector(float* values, int N) {
   // TODO: Implement your vectorized version of arraySumSerial here
+  int readIndexLeft;
+  int readIndexRight;
+  __cmu418_vec_float x;
+  __cmu418_vec_float xInterleaved;
+  __cmu418_mask maskAll;
 
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
+    maskAll = _cmu418_init_ones();
+    readIndexLeft = i / 2;
+    _cmu418_vload_float(x, values+readIndexLeft, maskAll);
+    _cmu418_hadd_float(x, x);
+    _cmu418_interleave_float(xInterleaved, x);
+    _cmu418_vstore_float(values+readIndexLeft, xInterleaved, maskAll);
 
+    readIndexRight = N - readIndexLeft - VECTOR_WIDTH;
+    _cmu418_vload_float(x, values+readIndexRight, maskAll);
+    _cmu418_hadd_float(x, x);
+    _cmu418_interleave_float(xInterleaved, x);
+    _cmu418_vstore_float(values+readIndexRight, xInterleaved, maskAll);
   }
 
-  return 0.0;
+  return values[(N-VECTOR_WIDTH)/2];
 }
-
