@@ -295,11 +295,9 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
     }
 
     // Clamp value
-    // if (result < threshold) {
-    _cmu418_vstore_float(output+i, result, maskAll);
-    // } else {
     _cmu418_vgt_float(maskGraterThanThreshold, result, threshold_float, maskAll);
-    _cmu418_vstore_float(output+i, threshold_float, maskGraterThanThreshold);
+    _cmu418_vmove_float(result, threshold_float, maskGraterThanThreshold);
+    _cmu418_vstore_float(output+i, result, maskAll);
   }
 }
 
@@ -312,15 +310,37 @@ float arraySumSerial(float* values, int N) {
   return sum;
 }
 
+void printArray(float* values, int N) {
+  for (int i=0; i<N; i++) {
+    printf("%f ", values[i]);
+  }
+  printf("\n");
+}
+
 // Assume N is a power VECTOR_WIDTH == 0
 // Assume VECTOR_WIDTH is a power of 2
 float arraySumVector(float* values, int N) {
   // TODO: Implement your vectorized version of arraySumSerial here
+  int readIndexLeft;
+  int readIndexRight;
+  __cmu418_vec_float x;
+  __cmu418_vec_float xInterleaved;
+  __cmu418_mask maskAll;
 
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
+    maskAll = _cmu418_init_ones();
+    readIndexLeft = i / 2;
+    _cmu418_vload_float(x, values+readIndexLeft, maskAll);
+    _cmu418_hadd_float(x, x);
+    _cmu418_interleave_float(xInterleaved, x);
+    _cmu418_vstore_float(values+readIndexLeft, xInterleaved, maskAll);
 
+    readIndexRight = N - readIndexLeft - VECTOR_WIDTH;
+    _cmu418_vload_float(x, values+readIndexRight, maskAll);
+    _cmu418_hadd_float(x, x);
+    _cmu418_interleave_float(xInterleaved, x);
+    _cmu418_vstore_float(values+readIndexRight, xInterleaved, maskAll);
   }
 
-  return 0.0;
+  return values[(N-VECTOR_WIDTH)/2];
 }
-
