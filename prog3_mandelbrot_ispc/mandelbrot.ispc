@@ -71,6 +71,9 @@ export void mandelbrot_ispc_withtasks(uniform float x0, uniform float y0,
     uniform int rowsPerTask = height / 2;
 
     // create 2 tasks
+    // note: decided two live 2 tasks since I'm running on Dual Core processor
+    //       with 4 max threads. However 4 tasks doesn't give noticable performance
+    //       increaes, since the program is (perhaps) not limited by latency .
     launch[2] mandelbrot_ispc_task(x0, y0, x1, y1,
                                      width, height,
                                      rowsPerTask,
