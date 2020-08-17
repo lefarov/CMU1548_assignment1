@@ -32,6 +32,7 @@ int main() {
     float* arrayX = new float[N];
     float* arrayY = new float[N];
     float* result = new float[N];
+    float* test = new float[N];
 
     // initialize array values
     for (unsigned int i=0; i<N; i++)
@@ -39,6 +40,7 @@ int main() {
         arrayX[i] = i;
         arrayY[i] = i;
         result[i] = 0.f;
+        test[i] = 0.f;
     }
 
     //
@@ -48,7 +50,7 @@ int main() {
     double minSerial = 1e30;
     for (int i = 0; i < 3; ++i) {
         double startTime =CycleTimer::currentSeconds();
-        saxpySerial(N, scale, arrayX, arrayY, result);
+        saxpySerial(N, scale, arrayX, arrayY, test);
         double endTime = CycleTimer::currentSeconds();
         minSerial = std::min(minSerial, endTime - startTime);
     }
@@ -92,6 +94,18 @@ int main() {
         double endTime = CycleTimer::currentSeconds();
         minTaskISPC = std::min(minTaskISPC, endTime - startTime);
     }
+
+    bool pass = true;
+    for (int i=0; i<10; ++i) {
+        // printf("%d ", result[i]);
+        if (result[i] != test[i]) {
+            pass = false;
+            // printf("%i\n", i);
+        }
+    }
+    // printf("\n");
+
+    if (pass) {printf("Pass! \n");}
 
     printf("[saxpy task ispc]:\t[%.3f] ms\t[%.3f] GB/s\t[%.3f] GFLOPS\n",
            minTaskISPC * 1000,
