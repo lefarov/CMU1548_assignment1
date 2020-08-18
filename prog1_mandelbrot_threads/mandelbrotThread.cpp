@@ -38,10 +38,25 @@ void* workerThreadStart(void* threadArgs) {
     // double startTime = CycleTimer::currentSeconds();
 
     unsigned int threadNumRows = args->height / args->numThreads;
+    
+    // Spatial decomposition
+    // if (
+    //     (args->height % args->numThreads != 0) && 
+    //     (args->threadId == args->numThreads - 1)) {
+    //     threadNumRows += args->numThreads % args->height;
+    // }
+    // mandelbrotSerial(
+    //     args->x0, args->y0, args->x1, args->y1, 
+    //     args->width, args->height,
+    //     (threadNumRows * args->threadId), threadNumRows,
+    //     args->maxIterations,
+    //     args->output
+    // );
+
+    // Interleaved assignment
     if (args->height % args->numThreads != 0) {
         threadNumRows ++;
     }
-    
     for (unsigned int i = 0; i < threadNumRows; i++) {
         unsigned int threadStartRow = i * args->numThreads + args->threadId;
         if (threadStartRow < args->height) {
