@@ -9,4 +9,7 @@ Program 1: Solution
         [mandelbrot thread 2 worktime]:         [170.309] ms
         [mandelbrot thread 1 worktime]:         [202.695] ms
 
-4. Interleaved assignment results in better workload balance and linear speedup. Run `python run_comparison.py` to plot the speedup over the number of threads: ![speedup plot](speedup_comparison.svg)
+4. Interleaved assignment results in better workload balance and linear speedup. Run `python run_comparison.py` to plot the speedup over the number of threads.
+![speedup plot][plot]
+
+[plot]: speedup_comparison.svg
