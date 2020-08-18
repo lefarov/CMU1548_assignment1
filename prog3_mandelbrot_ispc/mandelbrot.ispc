@@ -68,17 +68,9 @@ export void mandelbrot_ispc_withtasks(uniform float x0, uniform float y0,
                                       uniform int output[])
 {
 
-    uniform int rowsPerTask = height / 2;
+    uniform int rowsPerTask = height / 32;
 
-    // create 2 tasks
-    // According to Intel: "In general, one should launch many more tasks 
-    // than there are processors in the system to ensure good load-balancing, 
-    // but not so many that the overhead of scheduling and running tasks 
-    // dominates the computation."
-    // I'm running on Dual Core processor with 4 virutal cores. 
-    // However more then 2 tasks didn't show noticable increase in perfromance.
-    // The program is (perhaps) not limited by latency.
-    launch[2] mandelbrot_ispc_task(x0, y0, x1, y1,
+    launch[32] mandelbrot_ispc_task(x0, y0, x1, y1,
                                      width, height,
                                      rowsPerTask,
                                      maxIterations,
