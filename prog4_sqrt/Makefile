@@ -1,4 +1,5 @@
-CXX=g++ -m64
+# note: added `-no-pie` to compile for my machine
+CXX=g++ -m64 -no-pie
 CXXFLAGS=-I../common -Iobjs/ -O3 -Wall
 ISPC=ispc
 # note: change target to avx for AVX capable machines

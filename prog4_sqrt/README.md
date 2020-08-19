@@ -1,0 +1,6 @@
+Program 4: Solution
+===================
+
+1. SIMD speedup is `2.83x` on average, the speedup from multi-core parallelization is `7.42x`. I was running the experiments on Dual Core Intel Core i5 with 4 virtual cores. For this processor the maximum theoretical speedup is `4x` for single core and `16x` for the multi-core when ISPC is compiled for `see4` 4-wide SIMD instructions. The observed values are substantially lower because of the unbalanced workload.
+2. The best case input data for this program is an array with the same repeated value, which requires a lot of steps for the convergence, i.e. `3` or `0`. This input data will result in the balanced workload as well as the smallest possible ratio of memory accesses to arithmetic operations. It should result in both: high SIMD and multi-core speedups. Due to the high runtime I didn't finish the runs and didn't obtain the exact values. Will update as soon as get new hardware.
+3. The worst case scenario data input would be the highly unbalanced input with the high ratio of memory accesses. Given that we have 4-wide SIMD instructions repeating `(1, 1, 1, 3)` would do the job. Alternatively we could just use array of `1`s to get the most bandwidth limited case. For the latter I had `2.53x` speedup on average for SIMD and `2.70x` for ISPC tasks. 
