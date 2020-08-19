@@ -323,23 +323,44 @@ float arraySumVector(float* values, int N) {
   // TODO: Implement your vectorized version of arraySumSerial here
   int readIndexLeft;
   int readIndexRight;
+  int readIndexMiddle = (N-VECTOR_WIDTH)/2;
+
   __cmu418_vec_float x;
   __cmu418_vec_float xInterleaved;
-  __cmu418_mask maskAll;
+  __cmu418_mask maskAll = _cmu418_init_ones();
 
-  for (int i=0; i<N; i+=VECTOR_WIDTH) {
-    maskAll = _cmu418_init_ones();
+  // Aggregate the values from both sides in the middle of the array.
+  // One aggregation operation consits of subsequent application of `hadd` and `interleave`.
+  for (unsigned int i=0; i<N; i+=VECTOR_WIDTH) {
+    // Aggreagate values from the left side of array by moving with the `VECTOR_WIDTH/2` step.
+    // Example for `VECTOR_WIDTH=4`, () denotes aggregated elements:
+    // step 0: `[(0 1 2 3) 4 5 ...]`
+    // step 1: `[0 1 (2 3 4 5) ...]`
+    // etc..
     readIndexLeft = i / 2;
     _cmu418_vload_float(x, values+readIndexLeft, maskAll);
     _cmu418_hadd_float(x, x);
     _cmu418_interleave_float(xInterleaved, x);
     _cmu418_vstore_float(values+readIndexLeft, xInterleaved, maskAll);
 
+    // Aggreagate values from the right side.
     readIndexRight = N - readIndexLeft - VECTOR_WIDTH;
-    _cmu418_vload_float(x, values+readIndexRight, maskAll);
+    // At the last iteration `readIndexLeft` is equal to `readIndexRight` and `readIndexMiddle`.
+    // Insure that aggregation is not perofromed twice on the same elements.
+    if (readIndexLeft != readIndexRight) {
+      _cmu418_vload_float(x, values+readIndexRight, maskAll);
+      _cmu418_hadd_float(x, x);
+      _cmu418_interleave_float(xInterleaved, x);
+      _cmu418_vstore_float(values+readIndexRight, xInterleaved, maskAll);
+    }
+  }
+
+  // Peroform additional aggregations in the middle if `VECTOR_WIDTH>2`.
+  for (unsigned int i=0; i<log2(VECTOR_WIDTH) - 1; ++i) {
+    _cmu418_vload_float(x, values+readIndexMiddle, maskAll);
     _cmu418_hadd_float(x, x);
     _cmu418_interleave_float(xInterleaved, x);
-    _cmu418_vstore_float(values+readIndexRight, xInterleaved, maskAll);
+    _cmu418_vstore_float(values+readIndexLeft, xInterleaved, maskAll);
   }
 
   return values[(N-VECTOR_WIDTH)/2];
